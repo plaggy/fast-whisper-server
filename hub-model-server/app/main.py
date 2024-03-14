@@ -41,10 +41,3 @@ async def predict(
         )
     
     return out
-
-
-# debugging
-
-# import uvicorn
-# if __name__ == "__main__":
-#     uvicorn.run(app, host="0.0.0.0", port=7860, log_config="hub-model-server/app/utils/log_config.yaml")

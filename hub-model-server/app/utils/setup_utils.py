@@ -12,6 +12,7 @@ HF_MODULE_NAME = f"{Path(HF_DEFAULT_PIPELINE_NAME).stem}.EndpointHandler"
 
 logger = logging.getLogger(__name__)
 
+# by Philipp Schmid https://www.philschmid.de/
 
 def register_custom_pipeline_from_directory(model_dir):
     """
