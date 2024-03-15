@@ -4,6 +4,7 @@ import torch
 from typing import Annotated
 from pydantic import Json
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import PlainTextResponse
 from contextlib import asynccontextmanager
 from pyannote.audio import Pipeline
 from transformers import pipeline, AutoModelForCausalLM
@@ -59,6 +60,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+@app.get("/", response_class=PlainTextResponse)
+@app.get("/health", response_class=PlainTextResponse)
+async def health():
+    return "OK"
+
+
+@app.post("/")
 @app.post("/predict")
 async def predict(
     file: Annotated[UploadFile, File()],

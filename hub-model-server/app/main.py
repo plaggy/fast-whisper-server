@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Annotated
 from pydantic import Json
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import PlainTextResponse
 from contextlib import asynccontextmanager
 
 from app.utils.setup_utils import register_custom_pipeline_from_directory
@@ -22,6 +23,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/", response_class=PlainTextResponse)
+@app.get("/health", response_class=PlainTextResponse)
+async def health():
+    return "Ok"
 
 
 @app.post("/")
