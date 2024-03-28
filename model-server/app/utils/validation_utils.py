@@ -1,5 +1,4 @@
 import logging
-import torch
 import mimetypes
 
 from pydantic import BaseModel, ValidationError
@@ -56,17 +55,5 @@ async def validate_file(file: UploadFile) -> bytes:
             status_code=400,
             detail=f"File type {file.content_type} not supported"
         )
-
+    
     return await file.read()
-
-
-def check_cuda_fa2(device: torch.device):
-    if model_settings.flash_attn2 and device.type == "cpu":
-        raise ValueError("Flash attention 2 is not available on CPU")
-    if model_settings.flash_attn2 and device.type == "cuda":
-        pps = torch.cuda.get_device_properties(device)
-        if not (
-            (pps.major == 8 and pps.minor >= 0) or 
-            (pps.major == 9 and pps.minor == 0)
-        ):
-            raise ValueError("Flash attention 2 only supports Ampere GPUs or newer")

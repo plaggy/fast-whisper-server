@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from pyannote.audio import Pipeline
 from transformers import pipeline, AutoModelForCausalLM
 from diarization_utils import diarize
+from huggingface_hub import HfApi
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +17,12 @@ class EndpointHandler():
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         logger.info(f"Using device: {device.type}")
         torch_dtype = torch.float32 if device.type == "cpu" else torch.float16
-        attn_implementation = "flash_attention_2" if model_settings.flash_attn2 else "sdpa"
 
         self.assistant_model = AutoModelForCausalLM.from_pretrained(
             model_settings.assistant_model,
             torch_dtype=torch_dtype,
             low_cpu_mem_usage=True,
-            use_safetensors=True,
-            attn_implementation=attn_implementation,
+            use_safetensors=True
         ) if model_settings.assistant_model else None
 
         if self.assistant_model:
@@ -33,19 +32,19 @@ class EndpointHandler():
             "automatic-speech-recognition",
             model=model_settings.asr_model,
             torch_dtype=torch_dtype,
-            device=device,
-            model_kwargs={
-                "attn_implementation": attn_implementation,
-            },
+            device=device
         )
 
-        self.diarization_pipeline = Pipeline.from_pretrained(
-            checkpoint_path=model_settings.diarization_model,
-            use_auth_token=model_settings.hf_token,
-        ) if model_settings.diarization_model else None
-
-        if self.diarization_pipeline:
+        if model_settings.diarization_model:
+            # diarization pipeline doesn't raise if there is no token
+            HfApi().whoami(model_settings.hf_token)
+            self.diarization_pipeline = Pipeline.from_pretrained(
+                checkpoint_path=model_settings.diarization_model,
+                use_auth_token=model_settings.hf_token,
+            )
             self.diarization_pipeline.to(device)
+        else:
+            self.diarization_pipeline = None
 
     async def __call__(self, file, parameters):
 

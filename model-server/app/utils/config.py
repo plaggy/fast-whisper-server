@@ -1,4 +1,3 @@
-import os
 import logging
 
 from pydantic import BaseModel
@@ -31,10 +30,9 @@ audio_types = {
 
 class ModelSettings(BaseSettings):
     asr_model: str
-    flash_attn2: bool = False
-    assistant_model: Optional[str]
-    diarization_model: Optional[str]
-    hf_token: Optional[str]
+    assistant_model: Optional[str] = None
+    diarization_model: Optional[str] = None
+    hf_token: Optional[str] = None
 
 
 class InferenceConfig(BaseModel):
@@ -54,4 +52,3 @@ model_settings = ModelSettings()
 logger.info(f"asr model: {model_settings.asr_model}")
 logger.info(f"assist model: {model_settings.assistant_model}")
 logger.info(f"diar model: {model_settings.diarization_model}")
-logger.info(f"flash-attention-2: {model_settings.flash_attn2}")

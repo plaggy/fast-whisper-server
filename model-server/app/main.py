@@ -8,8 +8,9 @@ from fastapi.responses import PlainTextResponse
 from contextlib import asynccontextmanager
 from pyannote.audio import Pipeline
 from transformers import pipeline, AutoModelForCausalLM
+from huggingface_hub import HfApi
 
-from app.utils.validation_utils import validate_file, process_params, check_cuda_fa2
+from app.utils.validation_utils import validate_file, process_params
 from app.utils.diarization_utils import diarize
 from app.utils.config import model_settings
 
@@ -23,36 +24,36 @@ async def lifespan(app: FastAPI):
     logger.info(f"Using device: {device.type}")
 
     torch_dtype = torch.float32 if device.type == "cpu" else torch.float16
-    check_cuda_fa2(device)
 
-    attn_implementation = "flash_attention_2" if model_settings.flash_attn2 else "sdpa"
-
+    # from pytorch 2.2 sdpa implements flash attention 2
     models["asr_pipeline"] = pipeline(
         "automatic-speech-recognition",
         model=model_settings.asr_model,
         torch_dtype=torch_dtype,
-        device=device,
-        model_kwargs={"attn_implementation": attn_implementation},
+        device=device
     )
-
+    
     models["assistant_model"] = AutoModelForCausalLM.from_pretrained(
         model_settings.assistant_model,
         torch_dtype=torch_dtype,
         low_cpu_mem_usage=True,
-        use_safetensors=True,
-        attn_implementation=attn_implementation,
+        use_safetensors=True
     ) if model_settings.assistant_model else None
 
     if models["assistant_model"]:
         models["assistant_model"].to(device)
 
-    models["diarization_pipeline"] = Pipeline.from_pretrained(
-        checkpoint_path=model_settings.diarization_model,
-        use_auth_token=model_settings.hf_token,
-    ) if model_settings.diarization_model else None
-
-    if models["diarization_pipeline"]:
+    if model_settings.diarization_model:
+        # diarization pipeline doesn't raise if there is no token
+        HfApi().whoami(model_settings.hf_token)
+        models["diarization_pipeline"] = Pipeline.from_pretrained(
+            checkpoint_path=model_settings.diarization_model,
+            use_auth_token=model_settings.hf_token,
+        )
         models["diarization_pipeline"].to(device)
+    else:
+        models["diarization_pipeline"] = None
+
     yield
     models.clear()
 
@@ -84,6 +85,7 @@ async def predict(
     }
 
     try:
+        logger.info("starting ASR pipeline")
         asr_outputs = models["asr_pipeline"](
             file,
             chunk_length_s=parameters.chunk_length_s,
