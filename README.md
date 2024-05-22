@@ -1,3 +1,5 @@
+A blog post with the details of inner workings: https://huggingface.co/blog/asr-diarization
+
 Use with a prebuilt image:
 ```
 docker run --gpus all -p 7860:7860 --env-file .env ghcr.io/plaggy/asrdiarization-server:latest
